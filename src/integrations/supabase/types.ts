@@ -9,7 +9,154 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      trainer_profiles: {
+        Row: {
+          bio: string | null
+          career_motivation: string | null
+          certifications: Json | null
+          created_at: string
+          email: string
+          experience: string | null
+          full_name: string
+          government_id: string
+          hourly_rate: number | null
+          id: string
+          phone_number: string
+          profile_image_url: string | null
+          specializations: string[] | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          career_motivation?: string | null
+          certifications?: Json | null
+          created_at?: string
+          email: string
+          experience?: string | null
+          full_name: string
+          government_id: string
+          hourly_rate?: number | null
+          id?: string
+          phone_number: string
+          profile_image_url?: string | null
+          specializations?: string[] | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          career_motivation?: string | null
+          certifications?: Json | null
+          created_at?: string
+          email?: string
+          experience?: string | null
+          full_name?: string
+          government_id?: string
+          hourly_rate?: number | null
+          id?: string
+          phone_number?: string
+          profile_image_url?: string | null
+          specializations?: string[] | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trainer_sessions: {
+        Row: {
+          client_name: string
+          created_at: string
+          earnings: number | null
+          end_time: string
+          feedback: string | null
+          id: string
+          rating: number | null
+          session_date: string
+          session_type: string
+          start_time: string
+          status: string | null
+          trainer_id: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          earnings?: number | null
+          end_time: string
+          feedback?: string | null
+          id?: string
+          rating?: number | null
+          session_date: string
+          session_type: string
+          start_time: string
+          status?: string | null
+          trainer_id: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          earnings?: number | null
+          end_time?: string
+          feedback?: string | null
+          id?: string
+          rating?: number | null
+          session_date?: string
+          session_type?: string
+          start_time?: string
+          status?: string | null
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_sessions_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainer_time_slots: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+          trainer_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          start_time: string
+          trainer_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+          trainer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_time_slots_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
