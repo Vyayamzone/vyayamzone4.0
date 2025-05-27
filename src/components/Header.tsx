@@ -54,12 +54,18 @@ const Header = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300">
+            <Link 
+              to="/auth"
+              className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
+            >
               Login
-            </button>
-            <button className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+            </Link>
+            <Link 
+              to="/auth"
+              className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
               Sign Up
-            </button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -90,12 +96,20 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col space-y-2 pt-4">
-                <button className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left">
+                <Link 
+                  to="/auth"
+                  className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Login
-                </button>
-                <button className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transition-all duration-300 shadow-lg w-fit">
+                </Link>
+                <Link 
+                  to="/auth"
+                  className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transition-all duration-300 shadow-lg w-fit"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Sign Up
-                </button>
+                </Link>
               </div>
             </nav>
           </div>

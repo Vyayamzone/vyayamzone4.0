@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { checkUserRole } from '@/utils/middleware';
 
 interface AuthContextType {
   user: User | null;
@@ -21,11 +22,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle redirects based on user role
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          setTimeout(async () => {
+            const roleInfo = await checkUserRole(session.user.email!);
+            
+            // Only redirect if not already on the correct page
+            if (window.location.pathname !== roleInfo.redirectPath) {
+              window.location.href = roleInfo.redirectPath;
+            }
+          }, 100);
+        }
       }
     );
 
@@ -59,6 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    window.location.href = '/auth';
   };
 
   const value = {

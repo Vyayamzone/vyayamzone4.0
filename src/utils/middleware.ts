@@ -1,42 +1,57 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export const checkTrainerStatus = async (userEmail: string) => {
+export const checkUserRole = async (userEmail: string) => {
   try {
-    const { data: trainer, error } = await supabase
+    // Check if user is a trainer
+    const { data: trainerProfile, error: trainerError } = await supabase
       .from('trainer_profiles')
-      .select('status, id')
+      .select('status')
       .eq('email', userEmail)
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      console.error('Error checking trainer status:', error);
-      return { status: null, trainerId: null };
+    if (trainerProfile && !trainerError) {
+      return {
+        role: 'trainer',
+        status: trainerProfile.status,
+        redirectPath: trainerProfile.status === 'approved' 
+          ? '/dashboards/trainer' 
+          : '/dashboards/pending-trainer'
+      };
     }
 
+    // Check if user is a regular user
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('email', userEmail)
+      .single();
+
+    if (userProfile && !userError) {
+      return {
+        role: 'user',
+        status: 'active',
+        redirectPath: '/dashboards/user'
+      };
+    }
+
+    // If no profile found, redirect to auth
     return {
-      status: trainer?.status || null,
-      trainerId: trainer?.id || null
+      role: null,
+      status: null,
+      redirectPath: '/auth'
     };
   } catch (error) {
-    console.error('Error in checkTrainerStatus:', error);
-    return { status: null, trainerId: null };
+    console.error('Error checking user role:', error);
+    return {
+      role: null,
+      status: null,
+      redirectPath: '/auth'
+    };
   }
 };
 
-export const redirectBasedOnStatus = (status: string | null) => {
-  if (!status) {
-    return '/dashboards/trainer/signup';
-  }
-  
-  switch (status) {
-    case 'pending':
-      return '/dashboards/pending-trainer';
-    case 'approved':
-      return '/dashboards/trainer';
-    case 'rejected':
-      return '/dashboards/trainer/signup';
-    default:
-      return '/dashboards/trainer/signup';
-  }
+export const redirectBasedOnRole = async (userEmail: string) => {
+  const roleInfo = await checkUserRole(userEmail);
+  window.location.href = roleInfo.redirectPath;
 };

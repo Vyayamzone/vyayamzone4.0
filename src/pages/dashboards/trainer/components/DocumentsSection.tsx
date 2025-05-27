@@ -1,134 +1,129 @@
-
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
-import { Upload, FileText, Download, Trash2 } from 'lucide-react';
+import { Upload, File, Trash2, Download } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Document {
+  id: string;
   name: string;
+  url: string;
   size: number;
-  updated_at: string;
-  metadata?: any;
+  type: string;
+  uploaded_at: string;
 }
 
-interface DocumentsSectionProps {
-  trainerId: string;
-}
-
-const DocumentsSection = ({ trainerId }: DocumentsSectionProps) => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+const DocumentsSection = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      fetchDocuments();
-    }
-  }, [user]);
+    fetchDocuments();
+  }, []);
 
   const fetchDocuments = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { data, error } = await supabase.storage
         .from('trainer-documents')
-        .list(user?.id, {
-          limit: 100,
-          offset: 0
-        });
+        .list(user.id, { limit: 100 });
 
       if (error) throw error;
-      setDocuments(data || []);
+
+      const documentsWithUrls = await Promise.all(
+        (data || []).map(async (file) => {
+          const { data: urlData } = supabase.storage
+            .from('trainer-documents')
+            .getPublicUrl(`${user.id}/${file.name}`);
+
+          return {
+            id: file.id || file.name,
+            name: file.name,
+            url: urlData.publicUrl,
+            size: file.metadata?.size || 0,
+            type: file.metadata?.mimetype || '',
+            uploaded_at: file.created_at || new Date().toISOString()
+          };
+        })
+      );
+
+      setDocuments(documentsWithUrls);
     } catch (error) {
       console.error('Error fetching documents:', error);
-    } finally {
-      setLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to fetch documents",
+        variant: "destructive"
+      });
     }
   };
 
-  const uploadDocument = async (files: FileList) => {
-    if (!files || files.length === 0) return;
+  const uploadDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     setUploading(true);
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const fileName = `${user?.id}/${Date.now()}_${file.name}`;
-        const { error } = await supabase.storage
-          .from('trainer-documents')
-          .upload(fileName, file);
-        
-        if (error) throw error;
-        return fileName;
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
 
-      await Promise.all(uploadPromises);
-      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('trainer-documents')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
       toast({
-        title: "Upload Successful",
-        description: `${files.length} document(s) uploaded successfully.`,
+        title: "Success",
+        description: "Document uploaded successfully"
       });
 
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error uploading document:', error);
       toast({
-        title: "Upload Failed",
-        description: error.message,
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to upload document",
+        variant: "destructive"
       });
     } finally {
       setUploading(false);
     }
   };
 
-  const downloadDocument = async (fileName: string) => {
+  const deleteDocument = async (documentName: string) => {
     try {
-      const { data, error } = await supabase.storage
-        .from('trainer-documents')
-        .download(`${user?.id}/${fileName}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      toast({
-        title: "Download Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteDocument = async (fileName: string) => {
-    try {
       const { error } = await supabase.storage
         .from('trainer-documents')
-        .remove([`${user?.id}/${fileName}`]);
+        .remove([`${user.id}/${documentName}`]);
 
       if (error) throw error;
 
       toast({
-        title: "Document Deleted",
-        description: "The document has been removed.",
+        title: "Success",
+        description: "Document deleted successfully"
       });
 
       fetchDocuments();
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error deleting document:', error);
       toast({
-        title: "Delete Failed",
-        description: error.message,
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive"
       });
     }
   };
@@ -141,96 +136,75 @@ const DocumentsSection = ({ trainerId }: DocumentsSectionProps) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  if (loading) {
-    return <div className="text-center p-8">Loading documents...</div>;
-  }
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Upload className="w-5 h-5 mr-2" />
-            Upload Documents
-          </CardTitle>
-          <CardDescription>
-            Share fitness materials, workout plans, or certification documents
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="documents">Select Files</Label>
-              <Input
-                id="documents"
-                type="file"
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt"
-                onChange={(e) => e.target.files && uploadDocument(e.target.files)}
-                disabled={uploading}
-              />
-            </div>
-            <p className="text-sm text-gray-600">
-              Supported formats: PDF, JPG, PNG, DOC, DOCX, TXT (Max 10MB per file)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader>
+        <CardTitle>Documents & Materials</CardTitle>
+        <CardDescription>
+          Upload and manage your fitness materials, certifications, and documents
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <Label htmlFor="document-upload" className="cursor-pointer">
+            <span className="text-sm font-medium text-gray-700">
+              Click to upload documents
+            </span>
+            <Input
+              id="document-upload"
+              type="file"
+              className="hidden"
+              onChange={uploadDocument}
+              disabled={uploading}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+          </Label>
+          <p className="text-xs text-gray-500 mt-2">
+            PDF, DOC, DOCX, JPG, PNG up to 10MB
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Documents</CardTitle>
-          <CardDescription>Manage your uploaded files and materials</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {documents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No documents uploaded yet.</p>
-              <p className="text-sm">Upload your first document above.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {documents.map((doc) => (
-                <div
-                  key={doc.name}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center space-x-3">
-                    <FileText className="w-8 h-8 text-gray-400" />
-                    <div>
-                      <p className="font-medium text-gray-900">{doc.name}</p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span>{formatFileSize(doc.size)}</span>
-                        <span>
-                          Uploaded {new Date(doc.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadDocument(doc.name)}
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteDocument(doc.name)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+        <div className="space-y-4">
+          {documents.map((doc) => (
+            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center space-x-3">
+                <File className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="font-medium text-sm">{doc.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {formatFileSize(doc.size)} • Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                  </p>
                 </div>
-              ))}
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(doc.url, '_blank')}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => deleteDocument(doc.name)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          ))}
+        </div>
+
+        {documents.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <File className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <p>No documents uploaded yet</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
