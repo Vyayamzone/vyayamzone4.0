@@ -54,7 +54,18 @@ const ProfileSection = () => {
         .single();
 
       if (data) {
-        setProfile(data);
+        setProfile({
+          id: data.id,
+          full_name: data.full_name || '',
+          phone_number: data.phone_number || '',
+          age: data.age || 0,
+          gender: data.gender || '',
+          fitness_goals: data.fitness_goals || [],
+          health_conditions: data.health_conditions || '',
+          preferred_workout_types: data.preferred_workout_types || [],
+          experience_level: data.experience_level || '',
+          avatar_url: data.avatar_url || ''
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

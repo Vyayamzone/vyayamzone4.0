@@ -157,6 +157,57 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          age: number | null
+          avatar_url: string | null
+          created_at: string
+          email: string
+          experience_level: string | null
+          fitness_goals: string[] | null
+          full_name: string
+          gender: string | null
+          health_conditions: string | null
+          id: string
+          phone_number: string | null
+          preferred_workout_types: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age?: number | null
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          experience_level?: string | null
+          fitness_goals?: string[] | null
+          full_name: string
+          gender?: string | null
+          health_conditions?: string | null
+          id?: string
+          phone_number?: string | null
+          preferred_workout_types?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age?: number | null
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          experience_level?: string | null
+          fitness_goals?: string[] | null
+          full_name?: string
+          gender?: string | null
+          health_conditions?: string | null
+          id?: string
+          phone_number?: string | null
+          preferred_workout_types?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
