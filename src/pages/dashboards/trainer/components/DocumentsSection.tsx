@@ -7,6 +7,10 @@ import { Upload, File, Trash2, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface DocumentsSectionProps {
+  trainerId: string;
+}
+
 interface Document {
   id: string;
   name: string;
@@ -16,7 +20,7 @@ interface Document {
   uploaded_at: string;
 }
 
-const DocumentsSection = () => {
+const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
