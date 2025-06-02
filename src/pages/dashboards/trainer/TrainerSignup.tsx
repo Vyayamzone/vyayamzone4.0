@@ -8,15 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 
 const TrainerSignup = () => {
   const navigate = useNavigate();
-  const { user, signUp } = useAuth();
+  const { signUp } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [isLogin, setIsLogin] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -63,7 +62,10 @@ const TrainerSignup = () => {
       const { data: authData, error: authError } = await signUp(
         formData.email,
         formData.password,
-        { full_name: formData.fullName }
+        { 
+          full_name: formData.fullName,
+          signup_type: 'trainer'
+        }
       );
 
       if (authError) throw authError;
@@ -77,7 +79,7 @@ const TrainerSignup = () => {
         certifications = await uploadCertifications(userId, certificationFiles);
       }
 
-      // Create trainer profile
+      // Create trainer profile with pending status
       const { error: profileError } = await supabase
         .from('trainer_profiles')
         .insert({
@@ -96,7 +98,7 @@ const TrainerSignup = () => {
 
       toast({
         title: "Registration Successful!",
-        description: "Your profile has been submitted for review.",
+        description: "Your profile has been submitted for review. You'll be notified once approved.",
       });
 
       navigate('/dashboards/pending-trainer');
@@ -112,165 +114,133 @@ const TrainerSignup = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-      });
-
-      if (error) throw error;
-
-      // Check trainer status and redirect accordingly
-      const { data: trainer } = await supabase
-        .from('trainer_profiles')
-        .select('status')
-        .eq('email', formData.email)
-        .maybeSingle();
-
-      if (trainer) {
-        if (trainer.status === 'pending') {
-          navigate('/dashboards/pending-trainer');
-        } else if (trainer.status === 'approved') {
-          navigate('/dashboards/trainer');
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+        <div className="max-w-2xl w-full space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl font-bold text-center">
-                {isLogin ? 'Trainer Login' : 'Join as a Trainer'}
+                Join as a Trainer
               </CardTitle>
               <CardDescription className="text-center">
-                {isLogin ? 'Access your trainer dashboard' : 'Start your journey with VyayamZone'}
+                Share your expertise and help others achieve their fitness goals
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
+              <form onSubmit={handleSignup} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      required
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      required
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="+1234567890"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="governmentId">Government ID *</Label>
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
+                    id="governmentId"
+                    name="governmentId"
                     required
-                    value={formData.email}
+                    value={formData.governmentId}
                     onChange={handleInputChange}
-                    placeholder="your@email.com"
+                    placeholder="Driver's License / Passport Number"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="certifications">Certifications (Upload Files)</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type="password"
+                    id="certifications"
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => setCertificationFiles(e.target.files)}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Upload your fitness certifications, licenses, or relevant qualifications
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Experience *</Label>
+                  <Textarea
+                    id="experience"
+                    name="experience"
                     required
-                    value={formData.password}
+                    value={formData.experience}
                     onChange={handleInputChange}
-                    placeholder="••••••••"
+                    placeholder="Describe your fitness/wellness experience, specializations, and qualifications..."
+                    rows={4}
                   />
                 </div>
 
-                {!isLogin && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
-                      <Input
-                        id="fullName"
-                        name="fullName"
-                        required
-                        value={formData.fullName}
-                        onChange={handleInputChange}
-                        placeholder="John Doe"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Phone Number</Label>
-                      <Input
-                        id="phoneNumber"
-                        name="phoneNumber"
-                        required
-                        value={formData.phoneNumber}
-                        onChange={handleInputChange}
-                        placeholder="+1234567890"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="governmentId">Government ID</Label>
-                      <Input
-                        id="governmentId"
-                        name="governmentId"
-                        required
-                        value={formData.governmentId}
-                        onChange={handleInputChange}
-                        placeholder="Driver's License / Passport Number"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="certifications">Certifications (Upload Files)</Label>
-                      <Input
-                        id="certifications"
-                        type="file"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={(e) => setCertificationFiles(e.target.files)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="experience">Experience</Label>
-                      <Textarea
-                        id="experience"
-                        name="experience"
-                        value={formData.experience}
-                        onChange={handleInputChange}
-                        placeholder="Describe your fitness/wellness experience..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="careerMotivation">Career Motivation</Label>
-                      <Textarea
-                        id="careerMotivation"
-                        name="careerMotivation"
-                        value={formData.careerMotivation}
-                        onChange={handleInputChange}
-                        placeholder="Why do you want to be a trainer?"
-                        rows={3}
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="careerMotivation">Why do you want to be a trainer? *</Label>
+                  <Textarea
+                    id="careerMotivation"
+                    name="careerMotivation"
+                    required
+                    value={formData.careerMotivation}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about your passion for fitness and helping others achieve their goals..."
+                    rows={4}
+                  />
+                </div>
 
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={loading}
                 >
-                  {loading ? 'Processing...' : (isLogin ? 'Login' : 'Submit Application')}
+                  {loading ? 'Submitting Application...' : 'Submit Trainer Application'}
                 </Button>
               </form>
 
@@ -278,9 +248,9 @@ const TrainerSignup = () => {
                 <button
                   type="button"
                   className="text-sm text-blue-600 hover:text-blue-500"
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={() => navigate('/auth')}
                 >
-                  {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
+                  ← Back to Login
                 </button>
               </div>
             </CardContent>

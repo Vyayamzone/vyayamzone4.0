@@ -8,15 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserPlus, Dumbbell, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [signupType, setSignupType] = useState<'trainer' | 'user' | null>(null);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,26 +42,11 @@ const Auth = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      const { error } = await signUp(email, password, { signup_type: signupType });
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email for verification."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error", 
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+  const handleRoleSelection = (role: 'trainer' | 'user') => {
+    if (role === 'trainer') {
+      navigate('/dashboards/trainer/signup');
+    } else {
+      navigate('/user/signup');
     }
   };
 
@@ -69,8 +55,8 @@ const Auth = () => {
       <h3 className="text-lg font-semibold text-center">Choose your role</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-md ${signupType === 'trainer' ? 'ring-2 ring-teal-500' : ''}`}
-          onClick={() => setSignupType('trainer')}
+          className="cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-teal-500"
+          onClick={() => handleRoleSelection('trainer')}
         >
           <CardContent className="p-6 text-center">
             <Dumbbell className="h-12 w-12 mx-auto mb-4 text-teal-600" />
@@ -80,8 +66,8 @@ const Auth = () => {
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-md ${signupType === 'user' ? 'ring-2 ring-teal-500' : ''}`}
-          onClick={() => setSignupType('user')}
+          className="cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-teal-500"
+          onClick={() => handleRoleSelection('user')}
         >
           <CardContent className="p-6 text-center">
             <Search className="h-12 w-12 mx-auto mb-4 text-blue-600" />
@@ -159,49 +145,7 @@ const Auth = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {!signupType ? (
-                    <SignupTypeSelection />
-                  ) : (
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                      <div className="text-center mb-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setSignupType(null)}
-                          className="text-sm"
-                        >
-                          ← Change Role
-                        </Button>
-                        <p className="text-sm text-gray-600 mt-2">
-                          Signing up as: <span className="font-semibold capitalize">{signupType}</span>
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="signup-email">Email</Label>
-                        <Input
-                          id="signup-email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="signup-password">Password</Label>
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? 'Creating account...' : 'Create Account'}
-                      </Button>
-                    </form>
-                  )}
+                  <SignupTypeSelection />
                 </CardContent>
               </Card>
             </TabsContent>

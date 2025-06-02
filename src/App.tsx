@@ -11,6 +11,7 @@ import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import UserSignup from "./pages/UserSignup";
 import TrainerSignup from "./pages/dashboards/trainer/TrainerSignup";
 import PendingTrainerDashboard from "./pages/dashboards/pending-trainer/PendingTrainerDashboard";
 import TrainerDashboard from "./pages/dashboards/trainer/TrainerDashboard";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/user/signup" element={<UserSignup />} />
             <Route path="/dashboards/trainer/signup" element={<TrainerSignup />} />
             <Route path="/dashboards/pending-trainer" element={<PendingTrainerDashboard />} />
             <Route path="/dashboards/trainer" element={<TrainerDashboard />} />
