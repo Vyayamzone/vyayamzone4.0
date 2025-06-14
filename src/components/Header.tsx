@@ -1,11 +1,20 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { name: 'Home', path: '/' },
@@ -15,6 +24,17 @@ const Header = () => {
   ];
 
   const isActivePath = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getDashboardPath = () => {
+    if (user?.user_metadata?.signup_type === 'trainer') {
+      return '/dashboards/trainer';
+    }
+    return '/dashboards/user';
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
@@ -52,20 +72,47 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Auth Buttons */}
+          {/* Auth Section */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link 
-              to="/auth"
-              className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
-            >
-              Login
-            </Link>
-            <Link 
-              to="/auth"
-              className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              Sign Up
-            </Link>
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <Link 
+                  to={getDashboardPath()}
+                  className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
+                >
+                  Dashboard
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <User size={16} />
+                      <span>{user.user_metadata?.full_name || user.email}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut size={16} className="mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <>
+                <Link 
+                  to="/auth"
+                  className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/auth"
+                  className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -96,20 +143,42 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col space-y-2 pt-4">
-                <Link 
-                  to="/auth"
-                  className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/auth"
-                  className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transition-all duration-300 shadow-lg w-fit"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
+                {user ? (
+                  <>
+                    <Link 
+                      to={getDashboardPath()}
+                      className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Button 
+                      onClick={handleSignOut}
+                      variant="outline"
+                      className="justify-start"
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      to="/auth"
+                      className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link 
+                      to="/auth"
+                      className="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-full hover:from-teal-600 hover:to-teal-700 transition-all duration-300 shadow-lg w-fit"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>
