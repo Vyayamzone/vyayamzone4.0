@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [trainerStatus, setTrainerStatus] = useState<string | null>(null);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -22,6 +24,22 @@ const Header = () => {
     { name: 'Services', path: '/services' },
     { name: 'Contact', path: '/contact' },
   ];
+
+  useEffect(() => {
+    const checkTrainerStatus = async () => {
+      if (user?.email && user?.user_metadata?.signup_type === 'trainer') {
+        const { data: trainerProfile } = await supabase
+          .from('trainer_profiles')
+          .select('status')
+          .eq('email', user.email)
+          .single();
+        
+        setTrainerStatus(trainerProfile?.status || null);
+      }
+    };
+
+    checkTrainerStatus();
+  }, [user]);
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -34,6 +52,17 @@ const Header = () => {
       return '/dashboards/trainer';
     }
     return '/dashboards/user';
+  };
+
+  const shouldShowDashboard = () => {
+    if (!user) return false;
+    
+    // If user is a trainer and status is pending, hide dashboard
+    if (user?.user_metadata?.signup_type === 'trainer' && trainerStatus === 'pending') {
+      return false;
+    }
+    
+    return true;
   };
 
   return (
@@ -76,12 +105,14 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link 
-                  to={getDashboardPath()}
-                  className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
-                >
-                  Dashboard
-                </Link>
+                {shouldShowDashboard() && (
+                  <Link 
+                    to={getDashboardPath()}
+                    className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300"
+                  >
+                    Dashboard
+                  </Link>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="flex items-center space-x-2">
@@ -145,13 +176,15 @@ const Header = () => {
               <div className="flex flex-col space-y-2 pt-4">
                 {user ? (
                   <>
-                    <Link 
-                      to={getDashboardPath()}
-                      className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
+                    {shouldShowDashboard() && (
+                      <Link 
+                        to={getDashboardPath()}
+                        className="px-4 py-2 text-slate-700 font-medium hover:text-teal-600 transition-colors duration-300 text-left"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                    )}
                     <Button 
                       onClick={handleSignOut}
                       variant="outline"
