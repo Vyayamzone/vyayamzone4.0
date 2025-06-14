@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star, Heart, Search, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import TrainerDetailDialog from './TrainerDetailDialog';
 
 interface Trainer {
   id: string;
@@ -24,6 +25,8 @@ const TrainerBrowseSection = () => {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,7 +54,13 @@ const TrainerBrowseSection = () => {
     }
   };
 
-  const handleExpressInterest = async (trainerId: string, trainerName: string) => {
+  const handleTrainerClick = (trainer: Trainer) => {
+    setSelectedTrainer(trainer);
+    setDialogOpen(true);
+  };
+
+  const handleExpressInterest = async (trainerId: string, trainerName: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click
     toast({
       title: "Interest Expressed",
       description: `Your interest in connecting with ${trainerName} has been sent to admin for review.`
@@ -90,7 +99,11 @@ const TrainerBrowseSection = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTrainers.map((trainer) => (
-                <Card key={trainer.id} className="hover:shadow-md transition-shadow">
+                <Card 
+                  key={trainer.id} 
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleTrainerClick(trainer)}
+                >
                   <CardHeader className="pb-4">
                     <div className="flex items-center space-x-4">
                       <Avatar className="h-12 w-12">
@@ -129,12 +142,16 @@ const TrainerBrowseSection = () => {
                         ₹{trainer.hourly_rate}/hr
                       </span>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Heart className="h-4 w-4" />
                         </Button>
                         <Button 
                           size="sm"
-                          onClick={() => handleExpressInterest(trainer.id, trainer.full_name)}
+                          onClick={(e) => handleExpressInterest(trainer.id, trainer.full_name, e)}
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Connect
@@ -155,6 +172,12 @@ const TrainerBrowseSection = () => {
           )}
         </CardContent>
       </Card>
+
+      <TrainerDetailDialog
+        trainer={selectedTrainer}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 };
