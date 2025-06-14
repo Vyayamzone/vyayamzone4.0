@@ -91,10 +91,9 @@ const UserSignup = () => {
       if (authError) throw authError;
 
       const userId = authData.user?.id;
-      if (!userId) throw new Error('User ID not found');
-
-      // Create user profile
-      const { error: profileError } = await supabase
+      if (!userId) throw new Error('User ID not found');      // Create user profile
+      console.log('Creating user profile for userId:', userId);
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .insert({
           user_id: userId,
@@ -109,19 +108,32 @@ const UserSignup = () => {
           experience_level: formData.experienceLevel
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw profileError;
+      }
+      
+      console.log('User profile created successfully:', profileData);
 
       toast({
         title: "Account Created Successfully!",
         description: "Welcome to VyayamZone! Please check your email for verification.",
       });
 
-      navigate('/dashboards/user');
-    } catch (error: any) {
+      navigate('/dashboards/user');    } catch (error: any) {
       console.error('Signup error:', error);
+      const errorDescription = error.message || "An error occurred during registration.";
+      // Log more detailed error information to help with debugging
+      if (error.details) {
+        console.error('Error details:', error.details);
+      }
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+      
       toast({
         title: "Registration Failed",
-        description: error.message || "An error occurred during registration.",
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {

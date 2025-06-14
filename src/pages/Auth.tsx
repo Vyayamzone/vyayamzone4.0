@@ -41,12 +41,11 @@ const Auth = () => {
       setLoading(false);
     }
   };
-
   const handleRoleSelection = (role: 'trainer' | 'user') => {
     if (role === 'trainer') {
       navigate('/dashboards/trainer/signup');
     } else {
-      navigate('/user/signup');
+      navigate('/UserSignup');
     }
   };
 

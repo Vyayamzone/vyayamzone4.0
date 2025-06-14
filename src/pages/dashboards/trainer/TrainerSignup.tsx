@@ -77,10 +77,9 @@ const TrainerSignup = () => {
       let certifications = [];
       if (certificationFiles && certificationFiles.length > 0) {
         certifications = await uploadCertifications(userId, certificationFiles);
-      }
-
-      // Create trainer profile with pending status
-      const { error: profileError } = await supabase
+      }      // Create trainer profile with pending status
+      console.log('Creating trainer profile for userId:', userId);
+      const { data: profileData, error: profileError } = await supabase
         .from('trainer_profiles')
         .insert({
           user_id: userId,
@@ -94,19 +93,32 @@ const TrainerSignup = () => {
           status: 'pending'
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Trainer profile creation error:', profileError);
+        throw profileError;
+      }
+      
+      console.log('Trainer profile created successfully:', profileData);
 
       toast({
         title: "Registration Successful!",
         description: "Your profile has been submitted for review. You'll be notified once approved.",
       });
 
-      navigate('/dashboards/pending-trainer');
-    } catch (error: any) {
+      navigate('/dashboards/pending-trainer');    } catch (error: any) {
       console.error('Signup error:', error);
+      const errorDescription = error.message || "An error occurred during registration.";
+      // Log more detailed error information to help with debugging
+      if (error.details) {
+        console.error('Error details:', error.details);
+      }
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+      
       toast({
         title: "Registration Failed",
-        description: error.message || "An error occurred during registration.",
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
