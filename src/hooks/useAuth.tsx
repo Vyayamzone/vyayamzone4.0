@@ -3,7 +3,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { checkUserRole } from '@/utils/middleware';
-import { cleanupAuthState, createUserRole } from '@/utils/authUtils';
+import { cleanupAuthState } from '@/utils/authUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -72,12 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
 
-      // If signup successful and user exists, create default role
-      if (data.user && !error) {
-        const role = metadata?.signup_type === 'trainer' ? 'trainer' : 'user';
-        await createUserRole(data.user.id, email, role);
-      }
-
+      // No need to create user role since we determine roles from profile tables
       return { data, error };
     } catch (error) {
       console.error('Signup error:', error);
