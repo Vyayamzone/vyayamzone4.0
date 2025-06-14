@@ -20,6 +20,21 @@ export const checkUserRole = async (userEmail: string) => {
       };
     }
 
+    // Check if user is an admin
+    const { data: adminProfile, error: adminError } = await supabase
+      .from('admin_profiles')
+      .select('status')
+      .eq('email', userEmail)
+      .single();
+
+    if (adminProfile && !adminError) {
+      return {
+        role: 'admin',
+        status: adminProfile.status,
+        redirectPath: '/dashboards/admin'
+      };
+    }
+
     // Check if user is a regular user
     const { data: userProfile, error: userError } = await supabase
       .from('user_profiles')
@@ -32,16 +47,6 @@ export const checkUserRole = async (userEmail: string) => {
         role: 'user',
         status: 'active',
         redirectPath: '/dashboards/user'
-      };
-    }
-
-    // Check if user is admin (we can create an admin_profiles table or check by specific email)
-    // For now, let's check by email (you can modify this to use an admin_profiles table)
-    if (userEmail === 'admin@example.com') {
-      return {
-        role: 'admin',
-        status: 'active',
-        redirectPath: '/dashboards/admin'
       };
     }
 

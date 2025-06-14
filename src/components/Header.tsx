@@ -14,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [trainerStatus, setTrainerStatus] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<string | null>(null);
   const location = useLocation();
   const { user, signOut } = useAuth();
 
@@ -26,19 +27,49 @@ const Header = () => {
   ];
 
   useEffect(() => {
-    const checkTrainerStatus = async () => {
-      if (user?.email && user?.user_metadata?.signup_type === 'trainer') {
+    const checkUserRoleAndStatus = async () => {
+      if (user?.email) {
+        // Check if user is a trainer
         const { data: trainerProfile } = await supabase
           .from('trainer_profiles')
           .select('status')
           .eq('email', user.email)
           .single();
         
-        setTrainerStatus(trainerProfile?.status || null);
+        if (trainerProfile) {
+          setUserRole('trainer');
+          setUserStatus(trainerProfile.status);
+          return;
+        }
+
+        // Check if user is an admin
+        const { data: adminProfile } = await supabase
+          .from('admin_profiles')
+          .select('status')
+          .eq('email', user.email)
+          .single();
+        
+        if (adminProfile) {
+          setUserRole('admin');
+          setUserStatus(adminProfile.status);
+          return;
+        }
+
+        // Check if user is a regular user
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+        
+        if (userProfile) {
+          setUserRole('user');
+          setUserStatus('active');
+        }
       }
     };
 
-    checkTrainerStatus();
+    checkUserRoleAndStatus();
   }, [user]);
 
   const isActivePath = (path: string) => location.pathname === path;
@@ -48,17 +79,19 @@ const Header = () => {
   };
 
   const getDashboardPath = () => {
-    if (user?.user_metadata?.signup_type === 'trainer') {
+    if (userRole === 'trainer') {
       return '/dashboards/trainer';
+    } else if (userRole === 'admin') {
+      return '/dashboards/admin';
     }
     return '/dashboards/user';
   };
 
   const shouldShowDashboard = () => {
-    if (!user) return false;
+    if (!user || !userRole) return false;
     
     // If user is a trainer and status is pending, hide dashboard
-    if (user?.user_metadata?.signup_type === 'trainer' && trainerStatus === 'pending') {
+    if (userRole === 'trainer' && userStatus === 'pending') {
       return false;
     }
     

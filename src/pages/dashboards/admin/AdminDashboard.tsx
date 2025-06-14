@@ -1,13 +1,72 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Users, UserCheck, Settings, BarChart3 } from 'lucide-react';
 import Layout from '@/components/Layout';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DashboardStats {
+  totalUsers: number;
+  activeTrainers: number;
+  pendingApprovals: number;
+  totalRevenue: number;
+}
 
 const AdminDashboard = () => {
   const { signOut, user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    activeTrainers: 0,
+    pendingApprovals: 0,
+    totalRevenue: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        // Get total users count
+        const { count: usersCount } = await supabase
+          .from('user_profiles')
+          .select('*', { count: 'exact', head: true });
+
+        // Get active trainers count
+        const { count: activeTrainersCount } = await supabase
+          .from('trainer_profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'approved');
+
+        // Get pending trainer approvals count
+        const { count: pendingCount } = await supabase
+          .from('trainer_profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        // Calculate total revenue (sum of all trainer session earnings)
+        const { data: revenueData } = await supabase
+          .from('trainer_sessions')
+          .select('earnings')
+          .not('earnings', 'is', null);
+
+        const totalRevenue = revenueData?.reduce((sum, session) => sum + (session.earnings || 0), 0) || 0;
+
+        setStats({
+          totalUsers: usersCount || 0,
+          activeTrainers: activeTrainersCount || 0,
+          pendingApprovals: pendingCount || 0,
+          totalRevenue: totalRevenue
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   return (
     <Layout>
@@ -31,7 +90,9 @@ const AdminDashboard = () => {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {loading ? '...' : stats.totalUsers}
+                </div>
                 <p className="text-xs text-muted-foreground">Registered users</p>
               </CardContent>
             </Card>
@@ -42,7 +103,9 @@ const AdminDashboard = () => {
                 <UserCheck className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {loading ? '...' : stats.activeTrainers}
+                </div>
                 <p className="text-xs text-muted-foreground">Approved trainers</p>
               </CardContent>
             </Card>
@@ -53,7 +116,9 @@ const AdminDashboard = () => {
                 <Settings className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {loading ? '...' : stats.pendingApprovals}
+                </div>
                 <p className="text-xs text-muted-foreground">Awaiting review</p>
               </CardContent>
             </Card>
@@ -64,8 +129,10 @@ const AdminDashboard = () => {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">$0</div>
-                <p className="text-xs text-muted-foreground">This month</p>
+                <div className="text-2xl font-bold">
+                  ${loading ? '...' : stats.totalRevenue.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground">Total earnings</p>
               </CardContent>
             </Card>
           </div>
