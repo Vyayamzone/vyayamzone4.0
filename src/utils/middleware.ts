@@ -1,8 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { getUserRole } from './authUtils';
 
 export const checkUserRole = async (userEmail: string) => {
   try {
+    // Get user role from the database
+    const role = await getUserRole(userEmail);
+    
     // Check if user is a trainer
     const { data: trainerProfile, error: trainerError } = await supabase
       .from('trainer_profiles')
@@ -28,6 +32,15 @@ export const checkUserRole = async (userEmail: string) => {
       .single();
 
     if (userProfile && !userError) {
+      // Check if user is admin
+      if (role === 'admin') {
+        return {
+          role: 'admin',
+          status: 'active',
+          redirectPath: '/dashboards/admin'
+        };
+      }
+      
       return {
         role: 'user',
         status: 'active',

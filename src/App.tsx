@@ -16,6 +16,7 @@ import TrainerSignup from "./pages/dashboards/trainer/TrainerSignup";
 import PendingTrainerDashboard from "./pages/dashboards/pending-trainer/PendingTrainerDashboard";
 import TrainerDashboard from "./pages/dashboards/trainer/TrainerDashboard";
 import UserDashboard from "./pages/dashboards/user/UserDashboard";
+import AdminDashboard from "./pages/dashboards/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -32,11 +33,12 @@ const App = () => (
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/user/signup" element={<UserSignup />} />
+            <Route path="/UserSignup" element={<UserSignup />} />
             <Route path="/dashboards/trainer/signup" element={<TrainerSignup />} />
             <Route path="/dashboards/pending-trainer" element={<PendingTrainerDashboard />} />
             <Route path="/dashboards/trainer" element={<TrainerDashboard />} />
             <Route path="/dashboards/user" element={<UserDashboard />} />
+            <Route path="/dashboards/admin" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
