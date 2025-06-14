@@ -21,9 +21,11 @@ export const cleanupAuthState = () => {
 export const createUserRole = async (userId: string, email: string, role: string = 'user') => {
   const { error } = await supabase
     .from('user_roles')
-    .insert({
+    .upsert({
       user_id: userId,
       role: role
+    }, {
+      onConflict: 'user_id,role'
     });
   
   if (error) {
