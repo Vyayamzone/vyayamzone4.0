@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Plus, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Clock, Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +23,11 @@ interface TimeSlot {
 const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{ start_time: string; end_time: string }>({
+    start_time: '',
+    end_time: ''
+  });
   const { toast } = useToast();
 
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -34,19 +40,25 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
   const fetchTimeSlots = async () => {
     try {
+      console.log('Fetching time slots for trainer ID:', trainerId);
       const { data, error } = await supabase
         .from('trainer_time_slots')
         .select('*')
         .eq('trainer_id', trainerId)
         .order('day_of_week', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching time slots:', error);
+        throw error;
+      }
+      
+      console.log('Fetched time slots:', data);
       setTimeSlots(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching time slots:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch time slots",
+        description: `Failed to fetch time slots: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -56,6 +68,8 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
   const addTimeSlot = async (dayOfWeek: number) => {
     try {
+      console.log('Adding time slot for trainer ID:', trainerId, 'Day:', dayOfWeek);
+      
       const newSlot = {
         trainer_id: trainerId,
         day_of_week: dayOfWeek,
@@ -64,21 +78,30 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
         is_available: true
       };
 
-      const { error } = await supabase
-        .from('trainer_time_slots')
-        .insert(newSlot);
+      console.log('Inserting new slot:', newSlot);
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('trainer_time_slots')
+        .insert(newSlot)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding time slot:', error);
+        throw error;
+      }
       
+      console.log('Successfully added time slot:', data);
       fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot added successfully"
       });
     } catch (error: any) {
+      console.error('Error adding time slot:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to add time slot: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -86,22 +109,106 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
   const deleteTimeSlot = async (slotId: string) => {
     try {
+      console.log('Deleting time slot:', slotId);
+      
       const { error } = await supabase
         .from('trainer_time_slots')
         .delete()
         .eq('id', slotId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting time slot:', error);
+        throw error;
+      }
       
+      console.log('Successfully deleted time slot');
       fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot deleted successfully"
       });
     } catch (error: any) {
+      console.error('Error deleting time slot:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to delete time slot: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const startEditing = (slot: TimeSlot) => {
+    setEditingSlot(slot.id);
+    setEditValues({
+      start_time: slot.start_time,
+      end_time: slot.end_time
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingSlot(null);
+    setEditValues({ start_time: '', end_time: '' });
+  };
+
+  const saveTimeSlot = async (slotId: string) => {
+    try {
+      console.log('Updating time slot:', slotId, editValues);
+      
+      const { error } = await supabase
+        .from('trainer_time_slots')
+        .update({
+          start_time: editValues.start_time,
+          end_time: editValues.end_time
+        })
+        .eq('id', slotId);
+
+      if (error) {
+        console.error('Error updating time slot:', error);
+        throw error;
+      }
+      
+      console.log('Successfully updated time slot');
+      setEditingSlot(null);
+      fetchTimeSlots();
+      toast({
+        title: "Success",
+        description: "Time slot updated successfully"
+      });
+    } catch (error: any) {
+      console.error('Error updating time slot:', error);
+      toast({
+        title: "Error",
+        description: `Failed to update time slot: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleAvailability = async (slot: TimeSlot) => {
+    try {
+      console.log('Toggling availability for slot:', slot.id);
+      
+      const { error } = await supabase
+        .from('trainer_time_slots')
+        .update({ is_available: !slot.is_available })
+        .eq('id', slot.id);
+
+      if (error) {
+        console.error('Error toggling availability:', error);
+        throw error;
+      }
+      
+      console.log('Successfully toggled availability');
+      fetchTimeSlots();
+      toast({
+        title: "Success",
+        description: `Time slot marked as ${!slot.is_available ? 'available' : 'unavailable'}`
+      });
+    } catch (error: any) {
+      console.error('Error toggling availability:', error);
+      toast({
+        title: "Error",
+        description: `Failed to update availability: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -110,6 +217,16 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
   const getSlotsByDay = (dayOfWeek: number) => {
     return timeSlots.filter(slot => slot.day_of_week === dayOfWeek);
   };
+
+  if (!trainerId) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-center text-gray-500">Loading trainer information...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -122,13 +239,16 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Loading time slots...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading time slots...</p>
+            </div>
           ) : (
             <div className="space-y-6">
               {days.map((day, dayIndex) => (
                 <div key={dayIndex} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">{day}</h3>
+                    <h3 className="font-semibold text-lg">{day}</h3>
                     <Button
                       size="sm"
                       onClick={() => addTimeSlot(dayIndex)}
@@ -141,30 +261,85 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
                   
                   <div className="space-y-2">
                     {getSlotsByDay(dayIndex).length === 0 ? (
-                      <p className="text-gray-500 text-sm">No time slots available</p>
+                      <p className="text-gray-500 text-sm py-4 text-center bg-gray-50 rounded">
+                        No time slots available for {day}
+                      </p>
                     ) : (
                       getSlotsByDay(dayIndex).map((slot) => (
                         <div key={slot.id} className="flex items-center justify-between bg-gray-50 rounded p-3">
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 flex-1">
                             <Clock className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm">
-                              {slot.start_time} - {slot.end_time}
-                            </span>
+                            
+                            {editingSlot === slot.id ? (
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="time"
+                                  value={editValues.start_time}
+                                  onChange={(e) => setEditValues(prev => ({ ...prev, start_time: e.target.value }))}
+                                  className="w-24 h-8"
+                                />
+                                <span className="text-sm">to</span>
+                                <Input
+                                  type="time"
+                                  value={editValues.end_time}
+                                  onChange={(e) => setEditValues(prev => ({ ...prev, end_time: e.target.value }))}
+                                  className="w-24 h-8"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium">
+                                {slot.start_time} - {slot.end_time}
+                              </span>
+                            )}
+                            
                             <Badge 
                               variant={slot.is_available ? "default" : "secondary"}
-                              className="text-xs"
+                              className="text-xs cursor-pointer"
+                              onClick={() => toggleAvailability(slot)}
                             >
                               {slot.is_available ? 'Available' : 'Unavailable'}
                             </Badge>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteTimeSlot(slot.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          
+                          <div className="flex items-center space-x-2">
+                            {editingSlot === slot.id ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => saveTimeSlot(slot.id)}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <Save className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditing}
+                                  className="text-gray-600 hover:text-gray-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startEditing(slot)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deleteTimeSlot(slot.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       ))
                     )}
