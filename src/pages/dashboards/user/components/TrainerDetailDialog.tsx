@@ -51,17 +51,30 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
     if (!trainer) return;
     
     setLoading(true);
+    console.log('Fetching time slots for trainer:', trainer.id);
+    
     try {
       const { data, error } = await supabase
         .from('trainer_time_slots')
         .select('*')
         .eq('trainer_id', trainer.id)
-        .eq('is_available', true);
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching time slots:', error);
+        throw error;
+      }
+      
+      console.log('Fetched time slots:', data);
       setTimeSlots(data || []);
     } catch (error) {
       console.error('Error fetching time slots:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load trainer's available time slots",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -74,6 +87,8 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
     });
     onOpenChange(false);
   };
+
+  const availableSlots = timeSlots.filter(slot => slot.is_available);
 
   if (!trainer) return null;
 
@@ -139,22 +154,47 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
               </h3>
               
               {loading ? (
-                <div className="text-center py-4">Loading available slots...</div>
-              ) : timeSlots.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {timeSlots.map((slot) => (
-                    <div key={slot.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                      <div className="font-medium">{dayNames[slot.day_of_week]}</div>
-                      <div className="text-sm text-gray-600 flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {slot.start_time} - {slot.end_time}
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading available slots...</p>
+                </div>
+              ) : availableSlots.length > 0 ? (
+                <div className="space-y-4">
+                  {dayNames.map((dayName, dayIndex) => {
+                    const daySlots = availableSlots.filter(slot => slot.day_of_week === dayIndex);
+                    
+                    if (daySlots.length === 0) return null;
+                    
+                    return (
+                      <div key={dayIndex} className="border rounded-lg p-4">
+                        <h4 className="font-semibold text-lg mb-3 text-gray-800">{dayName}</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {daySlots.map((slot) => (
+                            <div key={slot.id} className="bg-green-50 border border-green-200 rounded-lg p-3 hover:bg-green-100 transition-colors cursor-pointer">
+                              <div className="flex items-center text-green-700">
+                                <Clock className="h-4 w-4 mr-2" />
+                                <span className="font-medium">{slot.start_time} - {slot.end_time}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="text-center py-4 text-gray-500">
-                  No available time slots at the moment
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg mb-2">No available time slots</p>
+                  <p className="text-gray-400 text-sm">This trainer hasn't set up their availability yet</p>
+                </div>
+              )}
+              
+              {!loading && timeSlots.length > 0 && availableSlots.length === 0 && (
+                <div className="text-center py-8">
+                  <Clock className="h-12 w-12 text-orange-300 mx-auto mb-4" />
+                  <p className="text-orange-600 text-lg mb-2">All slots are currently unavailable</p>
+                  <p className="text-orange-500 text-sm">Please check back later or contact the trainer directly</p>
                 </div>
               )}
             </CardContent>
@@ -166,9 +206,10 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
               onClick={handleBookSession}
               className="flex-1"
               size="lg"
+              disabled={availableSlots.length === 0}
             >
               <Calendar className="h-5 w-5 mr-2" />
-              Book Session
+              {availableSlots.length > 0 ? 'Book Session' : 'No Slots Available'}
             </Button>
             <Button variant="outline" size="lg">
               <MessageSquare className="h-5 w-5 mr-2" />
