@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -65,15 +64,27 @@ const ProfileSection = ({ trainerProfile, onUpdate }: ProfileSectionProps) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${trainerProfile.user_id}/profile.${fileExt}`;
 
+      console.log('Uploading file to path:', fileName);
+
+      // First try to remove the existing file if it exists
+      await supabase.storage
+        .from('trainer-documents')
+        .remove([fileName]);
+
       const { error: uploadError } = await supabase.storage
         .from('trainer-documents')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('trainer-documents')
         .getPublicUrl(fileName);
+
+      console.log('Public URL:', data.publicUrl);
 
       const { error: updateError } = await supabase
         .from('trainer_profiles')
@@ -89,6 +100,7 @@ const ProfileSection = ({ trainerProfile, onUpdate }: ProfileSectionProps) => {
 
       onUpdate();
     } catch (error: any) {
+      console.error('Profile image upload error:', error);
       toast({
         title: "Upload Failed",
         description: error.message,
