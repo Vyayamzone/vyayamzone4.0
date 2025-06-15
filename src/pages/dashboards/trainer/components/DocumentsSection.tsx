@@ -43,7 +43,8 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
       setTrainerProfile(data);
       
       // Parse existing certifications/documents - handle the JSON type properly
-      const existingDocs = Array.isArray(data.certifications) ? data.certifications as Document[] : [];
+      const existingDocs = Array.isArray(data.certifications) ? 
+        (data.certifications as unknown as Document[]) : [];
       setDocuments(existingDocs);
     } catch (error) {
       console.error('Error fetching trainer profile:', error);
