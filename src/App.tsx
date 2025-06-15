@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
@@ -35,10 +36,38 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/UserSignup" element={<UserSignup />} />
             <Route path="/dashboards/trainer/signup" element={<TrainerSignup />} />
-            <Route path="/dashboards/pending-trainer" element={<PendingTrainerDashboard />} />
-            <Route path="/dashboards/trainer" element={<TrainerDashboard />} />
-            <Route path="/dashboards/user" element={<UserDashboard />} />
-            <Route path="/dashboards/admin" element={<AdminDashboard />} />
+            <Route 
+              path="/dashboards/pending-trainer" 
+              element={
+                <ProtectedRoute allowedRoles={['trainer']}>
+                  <PendingTrainerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboards/trainer" 
+              element={
+                <ProtectedRoute allowedRoles={['trainer']}>
+                  <TrainerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboards/user" 
+              element={
+                <ProtectedRoute allowedRoles={['user']}>
+                  <UserDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboards/admin" 
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
