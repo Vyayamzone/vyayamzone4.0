@@ -42,8 +42,8 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
       if (error) throw error;
       setTrainerProfile(data);
       
-      // Parse existing certifications/documents
-      const existingDocs = data.certifications || [];
+      // Parse existing certifications/documents - handle the JSON type properly
+      const existingDocs = Array.isArray(data.certifications) ? data.certifications as Document[] : [];
       setDocuments(existingDocs);
     } catch (error) {
       console.error('Error fetching trainer profile:', error);
@@ -59,7 +59,7 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
     try {
       const { error } = await supabase
         .from('trainer_profiles')
-        .update({ certifications: newDocuments })
+        .update({ certifications: newDocuments as any })
         .eq('id', trainerId);
 
       if (error) throw error;
@@ -82,11 +82,16 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const filePath = `${user.id}/${fileName}`;
 
+      console.log('Uploading file to path:', filePath);
+
       const { error: uploadError } = await supabase.storage
         .from('trainer-documents')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: urlData } = supabase.storage
