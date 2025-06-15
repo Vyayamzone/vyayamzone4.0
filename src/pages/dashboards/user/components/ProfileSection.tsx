@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Upload, Camera } from 'lucide-react';
 
 interface UserProfile {
   id?: string;
@@ -38,6 +38,7 @@ const ProfileSection = () => {
     experience_level: ''
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -69,6 +70,82 @@ const ProfileSection = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      console.log('Uploading user avatar to path:', fileName);
+
+      // First try to remove the existing file if it exists
+      await supabase.storage
+        .from('trainer-documents')
+        .remove([fileName]);
+
+      const { error: uploadError } = await supabase.storage
+        .from('trainer-documents')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('trainer-documents')
+        .getPublicUrl(fileName);
+
+      console.log('Public URL:', data.publicUrl);
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => ({ ...prev, avatar_url: data.publicUrl }));
+
+      toast({
+        title: "Profile Image Updated",
+        description: "Your profile image has been successfully updated.",
+      });
+    } catch (error: any) {
+      console.error('Profile image upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -114,16 +191,44 @@ const ProfileSection = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
+          <div className="flex items-center space-x-6">
+            <Avatar className="h-24 w-24">
               <AvatarImage src={profile.avatar_url} />
-              <AvatarFallback>
+              <AvatarFallback className="text-2xl">
                 {profile.full_name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <Button variant="outline">Change Photo</Button>
-              <p className="text-sm text-gray-500 mt-1">JPG, PNG up to 2MB</p>
+            <div className="space-y-2">
+              <Label htmlFor="profile-image">Profile Image</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="profile-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => document.getElementById('profile-image')?.click()}
+                  disabled={uploadingImage}
+                  variant="outline"
+                  size="sm"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Upload className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 mr-2" />
+                      Change Photo
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500">Max size: 5MB. Formats: JPG, PNG, GIF</p>
             </div>
           </div>
 
