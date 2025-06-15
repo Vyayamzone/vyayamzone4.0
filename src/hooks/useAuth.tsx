@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasRedirectedOnSignIn, setHasRedirectedOnSignIn] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -29,21 +30,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle redirects based on user role after successful sign in
-        if (event === 'SIGNED_IN' && session?.user?.email) {
+        // Only redirect on SIGNED_IN event and only once per session
+        if (event === 'SIGNED_IN' && session?.user?.email && !hasRedirectedOnSignIn) {
+          setHasRedirectedOnSignIn(true);
+          
           // Use setTimeout to defer the redirect check to avoid conflicts
           setTimeout(async () => {
             try {
               const roleInfo = await checkUserRole(session.user.email!);
               
-              // Only redirect if not already on the correct page
-              if (window.location.pathname !== roleInfo.redirectPath) {
+              // Only redirect if we're currently on the auth page
+              if (window.location.pathname === '/auth') {
                 window.location.href = roleInfo.redirectPath;
               }
             } catch (error) {
               console.error('Error during post-signin redirect:', error);
             }
           }, 100);
+        }
+
+        // Reset redirect flag on sign out
+        if (event === 'SIGNED_OUT') {
+          setHasRedirectedOnSignIn(false);
         }
       }
     );
@@ -56,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [hasRedirectedOnSignIn]);
 
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
@@ -72,7 +80,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
 
-      // No need to create user role since we determine roles from profile tables
       return { data, error };
     } catch (error) {
       console.error('Signup error:', error);
@@ -93,6 +100,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Global signout failed, continuing...');
       }
 
+      // Reset redirect flag before signing in
+      setHasRedirectedOnSignIn(false);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -108,6 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       cleanupAuthState();
+      setHasRedirectedOnSignIn(false);
       await supabase.auth.signOut({ scope: 'global' });
       window.location.href = '/auth';
     } catch (error) {
