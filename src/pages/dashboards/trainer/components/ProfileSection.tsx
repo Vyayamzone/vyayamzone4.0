@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
-import { Edit2, Save, X } from 'lucide-react';
+import { Edit2, Save, X, Upload, Camera } from 'lucide-react';
 
 interface ProfileSectionProps {
   trainerProfile: any;
@@ -18,6 +19,7 @@ const ProfileSection = ({ trainerProfile, onUpdate }: ProfileSectionProps) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     full_name: trainerProfile?.full_name || '',
     phone_number: trainerProfile?.phone_number || '',
@@ -32,6 +34,69 @@ const ProfileSection = ({ trainerProfile, onUpdate }: ProfileSectionProps) => {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${trainerProfile.user_id}/profile.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('trainer-documents')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('trainer-documents')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('trainer_profiles')
+        .update({ profile_image_url: data.publicUrl })
+        .eq('id', trainerProfile.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Profile Image Updated",
+        description: "Your profile image has been successfully updated.",
+      });
+
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSave = async () => {
@@ -110,6 +175,48 @@ const ProfileSection = ({ trainerProfile, onUpdate }: ProfileSectionProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Profile Image Section */}
+        <div className="flex items-center space-x-6">
+          <Avatar className="h-24 w-24">
+            <AvatarImage src={trainerProfile?.profile_image_url} />
+            <AvatarFallback className="text-2xl">
+              {trainerProfile?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'T'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <Label htmlFor="profile-image">Profile Image</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="profile-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploadingImage}
+                className="hidden"
+              />
+              <Button
+                onClick={() => document.getElementById('profile-image')?.click()}
+                disabled={uploadingImage}
+                variant="outline"
+                size="sm"
+              >
+                {uploadingImage ? (
+                  <>
+                    <Upload className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-4 h-4 mr-2" />
+                    Change Photo
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-sm text-gray-500">Max size: 5MB. Formats: JPG, PNG, GIF</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="full_name">Full Name</Label>
