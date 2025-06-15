@@ -80,13 +80,15 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
       
       console.log('Fetched time slots data for trainer ID', trainer.id, ':', data);
       
-      if (data && data.time_slots) {
-        setTimeSlots(Array.isArray(data.time_slots) ? data.time_slots : []);
+      if (data && data.time_slots && Array.isArray(data.time_slots)) {
+        // Type assertion to convert from Json to TimeSlot[]
+        const parsedTimeSlots = data.time_slots as TimeSlot[];
+        setTimeSlots(parsedTimeSlots);
       } else {
         setTimeSlots([]);
       }
       
-      if (!data || !data.time_slots || data.time_slots.length === 0) {
+      if (!data || !data.time_slots || !Array.isArray(data.time_slots) || data.time_slots.length === 0) {
         console.log('No time slots found for trainer ID:', trainer.id);
       }
     } catch (error) {
@@ -156,7 +158,6 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
             </div>
           </div>
 
-          {/* Bio Section */}
           <Card>
             <CardContent className="p-6">
               <h3 className="text-xl font-semibold mb-3">About</h3>

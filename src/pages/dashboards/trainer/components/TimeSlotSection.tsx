@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,8 +67,10 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
       
       console.log('TimeSlotSection: Fetched time slots data:', data);
       
-      if (data && data.time_slots) {
-        setTimeSlots(Array.isArray(data.time_slots) ? data.time_slots : []);
+      if (data && data.time_slots && Array.isArray(data.time_slots)) {
+        // Type assertion to convert from Json to TimeSlot[]
+        const parsedTimeSlots = data.time_slots as TimeSlot[];
+        setTimeSlots(parsedTimeSlots);
       } else {
         setTimeSlots([]);
       }
@@ -100,11 +101,14 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
         throw fetchError;
       }
 
+      // Convert TimeSlot[] to Json (which accepts any serializable data)
+      const timeSlotsAsJson = JSON.parse(JSON.stringify(updatedSlots));
+
       if (existingRecord) {
         // Update existing record
         const { error } = await supabase
           .from('trainer_time_slots')
-          .update({ time_slots: updatedSlots })
+          .update({ time_slots: timeSlotsAsJson })
           .eq('trainer_id', trainerId);
 
         if (error) throw error;
@@ -114,7 +118,7 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
           .from('trainer_time_slots')
           .insert({
             trainer_id: trainerId,
-            time_slots: updatedSlots
+            time_slots: timeSlotsAsJson
           });
 
         if (error) throw error;
