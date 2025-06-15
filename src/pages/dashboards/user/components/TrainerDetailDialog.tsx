@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Star, Clock, MapPin, Award, Calendar, MessageSquare } from 'lucide-react';
+import { Star, Clock, Award, Calendar, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,7 +54,6 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
     console.log('Fetching time slots for trainer profile ID:', trainer.id);
     
     try {
-      // First, let's verify the trainer profile exists and get more details
       const { data: trainerProfile, error: profileError } = await supabase
         .from('trainer_profiles')
         .select('id, user_id, full_name')
@@ -68,23 +67,26 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
 
       console.log('Trainer profile found:', trainerProfile);
 
-      // Now fetch time slots using the trainer profile ID
       const { data, error } = await supabase
         .from('trainer_time_slots')
-        .select('*')
+        .select('time_slots')
         .eq('trainer_id', trainer.id)
-        .order('day_of_week', { ascending: true })
-        .order('start_time', { ascending: true });
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching time slots:', error);
         throw error;
       }
       
-      console.log('Fetched time slots for trainer ID', trainer.id, ':', data);
-      setTimeSlots(data || []);
+      console.log('Fetched time slots data for trainer ID', trainer.id, ':', data);
       
-      if (!data || data.length === 0) {
+      if (data && data.time_slots) {
+        setTimeSlots(Array.isArray(data.time_slots) ? data.time_slots : []);
+      } else {
+        setTimeSlots([]);
+      }
+      
+      if (!data || !data.time_slots || data.time_slots.length === 0) {
         console.log('No time slots found for trainer ID:', trainer.id);
       }
     } catch (error) {

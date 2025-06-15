@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,6 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
     try {
       console.log('TimeSlotSection: Fetching time slots for trainer profile ID:', trainerId);
       
-      // First verify this trainer profile exists
       const { data: trainerProfile, error: profileError } = await supabase
         .from('trainer_profiles')
         .select('id, user_id, full_name')
@@ -57,17 +57,22 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
       const { data, error } = await supabase
         .from('trainer_time_slots')
-        .select('*')
+        .select('time_slots')
         .eq('trainer_id', trainerId)
-        .order('day_of_week', { ascending: true });
+        .maybeSingle();
 
       if (error) {
         console.error('TimeSlotSection: Error fetching time slots:', error);
         throw error;
       }
       
-      console.log('TimeSlotSection: Fetched time slots for trainer ID', trainerId, ':', data);
-      setTimeSlots(data || []);
+      console.log('TimeSlotSection: Fetched time slots data:', data);
+      
+      if (data && data.time_slots) {
+        setTimeSlots(Array.isArray(data.time_slots) ? data.time_slots : []);
+      } else {
+        setTimeSlots([]);
+      }
     } catch (error: any) {
       console.error('TimeSlotSection: Error in fetchTimeSlots:', error);
       toast({
@@ -80,33 +85,64 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
     }
   };
 
+  const saveTimeSlots = async (updatedSlots: TimeSlot[]) => {
+    try {
+      console.log('TimeSlotSection: Saving time slots for trainer ID:', trainerId);
+      
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('trainer_time_slots')
+        .select('id')
+        .eq('trainer_id', trainerId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking existing record:', fetchError);
+        throw fetchError;
+      }
+
+      if (existingRecord) {
+        // Update existing record
+        const { error } = await supabase
+          .from('trainer_time_slots')
+          .update({ time_slots: updatedSlots })
+          .eq('trainer_id', trainerId);
+
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('trainer_time_slots')
+          .insert({
+            trainer_id: trainerId,
+            time_slots: updatedSlots
+          });
+
+        if (error) throw error;
+      }
+
+      setTimeSlots(updatedSlots);
+      console.log('TimeSlotSection: Successfully saved time slots');
+    } catch (error: any) {
+      console.error('TimeSlotSection: Error saving time slots:', error);
+      throw error;
+    }
+  };
+
   const addTimeSlot = async (dayOfWeek: number) => {
     try {
-      console.log('TimeSlotSection: Adding time slot for trainer profile ID:', trainerId, 'Day:', dayOfWeek);
+      console.log('TimeSlotSection: Adding time slot for day:', dayOfWeek);
       
-      const newSlot = {
-        trainer_id: trainerId, // This should be the trainer_profiles.id
+      const newSlot: TimeSlot = {
+        id: crypto.randomUUID(),
         day_of_week: dayOfWeek,
         start_time: '09:00',
         end_time: '10:00',
         is_available: true
       };
 
-      console.log('TimeSlotSection: Inserting new slot:', newSlot);
-
-      const { data, error } = await supabase
-        .from('trainer_time_slots')
-        .insert(newSlot)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('TimeSlotSection: Error adding time slot:', error);
-        throw error;
-      }
+      const updatedSlots = [...timeSlots, newSlot];
+      await saveTimeSlots(updatedSlots);
       
-      console.log('TimeSlotSection: Successfully added time slot:', data);
-      fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot added successfully"
@@ -125,18 +161,9 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
     try {
       console.log('Deleting time slot:', slotId);
       
-      const { error } = await supabase
-        .from('trainer_time_slots')
-        .delete()
-        .eq('id', slotId);
-
-      if (error) {
-        console.error('Error deleting time slot:', error);
-        throw error;
-      }
+      const updatedSlots = timeSlots.filter(slot => slot.id !== slotId);
+      await saveTimeSlots(updatedSlots);
       
-      console.log('Successfully deleted time slot');
-      fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot deleted successfully"
@@ -168,22 +195,15 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
     try {
       console.log('Updating time slot:', slotId, editValues);
       
-      const { error } = await supabase
-        .from('trainer_time_slots')
-        .update({
-          start_time: editValues.start_time,
-          end_time: editValues.end_time
-        })
-        .eq('id', slotId);
+      const updatedSlots = timeSlots.map(slot => 
+        slot.id === slotId 
+          ? { ...slot, start_time: editValues.start_time, end_time: editValues.end_time }
+          : slot
+      );
 
-      if (error) {
-        console.error('Error updating time slot:', error);
-        throw error;
-      }
+      await saveTimeSlots(updatedSlots);
       
-      console.log('Successfully updated time slot');
       setEditingSlot(null);
-      fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot updated successfully"
@@ -202,18 +222,14 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
     try {
       console.log('Toggling availability for slot:', slot.id);
       
-      const { error } = await supabase
-        .from('trainer_time_slots')
-        .update({ is_available: !slot.is_available })
-        .eq('id', slot.id);
+      const updatedSlots = timeSlots.map(s => 
+        s.id === slot.id 
+          ? { ...s, is_available: !s.is_available }
+          : s
+      );
 
-      if (error) {
-        console.error('Error toggling availability:', error);
-        throw error;
-      }
+      await saveTimeSlots(updatedSlots);
       
-      console.log('Successfully toggled availability');
-      fetchTimeSlots();
       toast({
         title: "Success",
         description: `Time slot marked as ${!slot.is_available ? 'available' : 'unavailable'}`

@@ -152,36 +152,30 @@ export type Database = {
       trainer_time_slots: {
         Row: {
           created_at: string
-          day_of_week: number
-          end_time: string
           id: string
-          is_available: boolean | null
-          start_time: string
+          time_slots: Json
           trainer_id: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          day_of_week: number
-          end_time: string
           id?: string
-          is_available?: boolean | null
-          start_time: string
+          time_slots?: Json
           trainer_id: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          day_of_week?: number
-          end_time?: string
           id?: string
-          is_available?: boolean | null
-          start_time?: string
+          time_slots?: Json
           trainer_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "trainer_time_slots_trainer_id_fkey"
             columns: ["trainer_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "trainer_profiles"
             referencedColumns: ["id"]
           },
