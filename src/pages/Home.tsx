@@ -1,35 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import TrainerCard from '../components/TrainerCard';
+import TrainerDetailDialog from '../pages/dashboards/user/components/TrainerDetailDialog';
 import { ArrowRight, Users, Award, Clock, Heart } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface Trainer {
+  id: string;
+  full_name: string;
+  email: string;
+  specializations: string[];
+  experience: string;
+  hourly_rate: number;
+  bio: string;
+  profile_image_url?: string;
+}
 
 const Home = () => {
   const navigate = useNavigate();
-
-  const trainers = [
-    {
-      name: "Sarah Johnson",
-      specialty: "Yoga & Meditation",
-      rating: 5,
-      experience: "8+ years",
-      image: "https://images.unsplash.com/photo-1506629905587-4b9d64d8c5a7?w=400&h=300&fit=crop"
-    },
-    {
-      name: "Mike Rodriguez",
-      specialty: "Personal Training",
-      rating: 5,
-      experience: "6+ years",
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop"
-    },
-    {
-      name: "Emma Chen",
-      specialty: "Zumba & Dance",
-      rating: 4,
-      experience: "5+ years",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=300&fit=crop"
-    }
-  ];
+  const { user } = useAuth();
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const stats = [
     { icon: Users, number: "500+", label: "Active Trainers" },
@@ -38,12 +33,52 @@ const Home = () => {
     { icon: Clock, number: "24/7", label: "Support" }
   ];
 
+  useEffect(() => {
+    fetchApprovedTrainers();
+  }, []);
+
+  const fetchApprovedTrainers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trainer_profiles')
+        .select('*')
+        .eq('status', 'approved')
+        .limit(6); // Show first 6 trainers
+
+      if (error) throw error;
+      setTrainers(data || []);
+    } catch (error) {
+      console.error('Error fetching trainers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFindTrainer = () => {
     navigate('/auth');
   };
 
   const handleJoinAsTrainer = () => {
     navigate('/dashboards/trainer/signup');
+  };
+
+  const handleViewProfile = (trainer: Trainer) => {
+    if (!user) {
+      // Redirect to login if not authenticated
+      navigate('/auth');
+      return;
+    }
+    
+    setSelectedTrainer(trainer);
+    setDialogOpen(true);
+  };
+
+  const handleViewAllTrainers = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    navigate('/dashboards/user');
   };
 
   return (
@@ -169,19 +204,47 @@ const Home = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {trainers.map((trainer, index) => (
-              <div key={index} className="animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
-                <TrainerCard {...trainer} />
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-lg text-slate-600">Loading trainers...</div>
+            </div>
+          ) : trainers.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                {trainers.map((trainer, index) => (
+                  <div key={trainer.id} className="animate-fade-in" style={{ animationDelay: `${index * 200}ms` }}>
+                    <TrainerCard 
+                      name={trainer.full_name}
+                      specialty={trainer.specializations?.join(', ') || 'Fitness Training'}
+                      rating={5}
+                      experience={trainer.experience || 'Experienced Trainer'}
+                      image={trainer.profile_image_url || 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop'}
+                      onViewProfile={() => handleViewProfile(trainer)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-8 sm:mt-12">
-            <button className="bg-gradient-to-r from-teal-500 to-teal-600 text-white font-bold py-3 px-6 sm:px-8 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-              View All Trainers
-            </button>
-          </div>
+              
+              <div className="text-center mt-8 sm:mt-12">
+                <button 
+                  onClick={handleViewAllTrainers}
+                  className="bg-gradient-to-r from-teal-500 to-teal-600 text-white font-bold py-3 px-6 sm:px-8 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  View All Trainers
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-lg text-slate-600 mb-4">No approved trainers available at the moment.</div>
+              <button 
+                onClick={handleJoinAsTrainer}
+                className="bg-gradient-to-r from-teal-500 to-teal-600 text-white font-bold py-3 px-6 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300"
+              >
+                Become a Trainer
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -200,6 +263,13 @@ const Home = () => {
           </button>
         </div>
       </section>
+
+      {/* Trainer Detail Dialog */}
+      <TrainerDetailDialog
+        trainer={selectedTrainer}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </Layout>
   );
 };

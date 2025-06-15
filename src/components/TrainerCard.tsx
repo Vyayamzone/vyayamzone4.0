@@ -8,9 +8,10 @@ interface TrainerCardProps {
   rating: number;
   experience: string;
   image: string;
+  onViewProfile?: () => void;
 }
 
-const TrainerCard = ({ name, specialty, rating, experience, image }: TrainerCardProps) => {
+const TrainerCard = ({ name, specialty, rating, experience, image, onViewProfile }: TrainerCardProps) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden group">
       <div className="relative overflow-hidden">
@@ -40,7 +41,10 @@ const TrainerCard = ({ name, specialty, rating, experience, image }: TrainerCard
           <span className="text-sm text-slate-500">{experience}</span>
         </div>
         
-        <button className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium py-2 px-4 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg">
+        <button 
+          onClick={onViewProfile}
+          className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium py-2 px-4 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+        >
           View Profile
         </button>
       </div>
