@@ -1,10 +1,12 @@
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import TrainerCard from '../components/TrainerCard';
 import { ArrowRight, Users, Award, Clock, Heart } from 'lucide-react';
 
 const Home = () => {
+  const navigate = useNavigate();
+
   const trainers = [
     {
       name: "Sarah Johnson",
@@ -35,6 +37,14 @@ const Home = () => {
     { icon: Award, number: "95%", label: "Success Rate" },
     { icon: Clock, number: "24/7", label: "Support" }
   ];
+
+  const handleFindTrainer = () => {
+    navigate('/auth');
+  };
+
+  const handleJoinAsTrainer = () => {
+    navigate('/dashboards/trainer/signup');
+  };
 
   return (
     <Layout>
@@ -74,12 +84,18 @@ const Home = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4 sm:px-0">
-              <button className="w-full sm:w-auto group bg-gradient-to-r from-teal-500 to-teal-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center space-x-2">
+              <button 
+                onClick={handleFindTrainer}
+                className="w-full sm:w-auto group bg-gradient-to-r from-teal-500 to-teal-600 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center space-x-2"
+              >
                 <span>Find a Trainer</span>
                 <ArrowRight className="group-hover:translate-x-1 transition-transform duration-300" size={20} />
               </button>
               
-              <button className="w-full sm:w-auto group bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:bg-white/20 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2">
+              <button 
+                onClick={handleJoinAsTrainer}
+                className="w-full sm:w-auto group bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:bg-white/20 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
+              >
                 <span>Join as Trainer</span>
                 <ArrowRight className="group-hover:translate-x-1 transition-transform duration-300" size={20} />
               </button>
