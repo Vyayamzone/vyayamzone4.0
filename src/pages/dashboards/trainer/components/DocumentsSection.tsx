@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,48 +24,48 @@ interface Document {
 const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [trainerProfile, setTrainerProfile] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    fetchTrainerProfile();
+  }, [trainerId]);
 
-  const fetchDocuments = async () => {
+  const fetchTrainerProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase.storage
-        .from('trainer-documents')
-        .list(user.id, { limit: 100 });
+      const { data, error } = await supabase
+        .from('trainer_profiles')
+        .select('*')
+        .eq('id', trainerId)
+        .single();
 
       if (error) throw error;
-
-      const documentsWithUrls = await Promise.all(
-        (data || []).map(async (file) => {
-          const { data: urlData } = supabase.storage
-            .from('trainer-documents')
-            .getPublicUrl(`${user.id}/${file.name}`);
-
-          return {
-            id: file.id || file.name,
-            name: file.name,
-            url: urlData.publicUrl,
-            size: file.metadata?.size || 0,
-            type: file.metadata?.mimetype || '',
-            uploaded_at: file.created_at || new Date().toISOString()
-          };
-        })
-      );
-
-      setDocuments(documentsWithUrls);
+      setTrainerProfile(data);
+      
+      // Parse existing certifications/documents
+      const existingDocs = data.certifications || [];
+      setDocuments(existingDocs);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      console.error('Error fetching trainer profile:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch documents",
+        description: "Failed to fetch trainer profile",
         variant: "destructive"
       });
+    }
+  };
+
+  const updateTrainerCertifications = async (newDocuments: Document[]) => {
+    try {
+      const { error } = await supabase
+        .from('trainer_profiles')
+        .update({ certifications: newDocuments })
+        .eq('id', trainerId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating trainer certifications:', error);
+      throw error;
     }
   };
 
@@ -78,21 +79,45 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
       if (!user) throw new Error('User not authenticated');
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const filePath = `${user.id}/${fileName}`;
 
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('trainer-documents')
         .upload(filePath, file);
 
-      if (error) throw error;
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('trainer-documents')
+        .getPublicUrl(filePath);
+
+      // Create document object
+      const newDocument: Document = {
+        id: fileName,
+        name: file.name,
+        url: urlData.publicUrl,
+        size: file.size,
+        type: file.type,
+        uploaded_at: new Date().toISOString()
+      };
+
+      // Update documents array
+      const updatedDocuments = [...documents, newDocument];
+      
+      // Update trainer profile certifications
+      await updateTrainerCertifications(updatedDocuments);
+      
+      setDocuments(updatedDocuments);
 
       toast({
         title: "Success",
         description: "Document uploaded successfully"
       });
 
-      fetchDocuments();
+      // Reset file input
+      event.target.value = '';
     } catch (error) {
       console.error('Error uploading document:', error);
       toast({
@@ -105,23 +130,39 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
     }
   };
 
-  const deleteDocument = async (documentName: string) => {
+  const deleteDocument = async (documentId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase.storage
-        .from('trainer-documents')
-        .remove([`${user.id}/${documentName}`]);
+      const documentToDelete = documents.find(doc => doc.id === documentId);
+      if (!documentToDelete) return;
 
-      if (error) throw error;
+      // Extract file path from URL or use the document ID
+      const filePath = `${user.id}/${documentId}`;
+
+      // Delete from storage
+      const { error: deleteError } = await supabase.storage
+        .from('trainer-documents')
+        .remove([filePath]);
+
+      if (deleteError) {
+        console.error('Storage deletion error:', deleteError);
+        // Continue with removing from database even if storage deletion fails
+      }
+
+      // Update documents array
+      const updatedDocuments = documents.filter(doc => doc.id !== documentId);
+      
+      // Update trainer profile certifications
+      await updateTrainerCertifications(updatedDocuments);
+      
+      setDocuments(updatedDocuments);
 
       toast({
         title: "Success",
         description: "Document deleted successfully"
       });
-
-      fetchDocuments();
     } catch (error) {
       console.error('Error deleting document:', error);
       toast({
@@ -143,9 +184,9 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documents & Materials</CardTitle>
+        <CardTitle>Documents & Certifications</CardTitle>
         <CardDescription>
-          Upload and manage your fitness materials, certifications, and documents
+          Upload your fitness certifications, credentials, and professional documents
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -167,6 +208,9 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
           <p className="text-xs text-gray-500 mt-2">
             PDF, DOC, DOCX, JPG, PNG up to 10MB
           </p>
+          {uploading && (
+            <p className="text-sm text-blue-600 mt-2">Uploading document...</p>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -192,7 +236,7 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => deleteDocument(doc.name)}
+                  onClick={() => deleteDocument(doc.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -205,6 +249,7 @@ const DocumentsSection: React.FC<DocumentsSectionProps> = ({ trainerId }) => {
           <div className="text-center py-8 text-gray-500">
             <File className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <p>No documents uploaded yet</p>
+            <p className="text-sm">Upload your certifications and credentials to get started</p>
           </div>
         )}
       </CardContent>
