@@ -51,9 +51,24 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
     if (!trainer) return;
     
     setLoading(true);
-    console.log('Fetching time slots for trainer:', trainer.id);
+    console.log('Fetching time slots for trainer profile ID:', trainer.id);
     
     try {
+      // First, let's verify the trainer profile exists and get more details
+      const { data: trainerProfile, error: profileError } = await supabase
+        .from('trainer_profiles')
+        .select('id, user_id, full_name')
+        .eq('id', trainer.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching trainer profile:', profileError);
+        throw new Error('Trainer profile not found');
+      }
+
+      console.log('Trainer profile found:', trainerProfile);
+
+      // Now fetch time slots using the trainer profile ID
       const { data, error } = await supabase
         .from('trainer_time_slots')
         .select('*')
@@ -66,10 +81,14 @@ const TrainerDetailDialog = ({ trainer, open, onOpenChange }: TrainerDetailDialo
         throw error;
       }
       
-      console.log('Fetched time slots:', data);
+      console.log('Fetched time slots for trainer ID', trainer.id, ':', data);
       setTimeSlots(data || []);
+      
+      if (!data || data.length === 0) {
+        console.log('No time slots found for trainer ID:', trainer.id);
+      }
     } catch (error) {
-      console.error('Error fetching time slots:', error);
+      console.error('Error in fetchTrainerTimeSlots:', error);
       toast({
         title: "Error",
         description: "Failed to load trainer's available time slots",

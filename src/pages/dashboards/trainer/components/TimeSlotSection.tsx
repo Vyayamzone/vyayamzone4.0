@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,22 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
   const fetchTimeSlots = async () => {
     try {
-      console.log('Fetching time slots for trainer ID:', trainerId);
+      console.log('TimeSlotSection: Fetching time slots for trainer profile ID:', trainerId);
+      
+      // First verify this trainer profile exists
+      const { data: trainerProfile, error: profileError } = await supabase
+        .from('trainer_profiles')
+        .select('id, user_id, full_name')
+        .eq('id', trainerId)
+        .single();
+
+      if (profileError) {
+        console.error('TimeSlotSection: Error fetching trainer profile:', profileError);
+        throw new Error('Trainer profile not found');
+      }
+
+      console.log('TimeSlotSection: Trainer profile found:', trainerProfile);
+
       const { data, error } = await supabase
         .from('trainer_time_slots')
         .select('*')
@@ -48,14 +62,14 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
         .order('day_of_week', { ascending: true });
 
       if (error) {
-        console.error('Error fetching time slots:', error);
+        console.error('TimeSlotSection: Error fetching time slots:', error);
         throw error;
       }
       
-      console.log('Fetched time slots:', data);
+      console.log('TimeSlotSection: Fetched time slots for trainer ID', trainerId, ':', data);
       setTimeSlots(data || []);
     } catch (error: any) {
-      console.error('Error fetching time slots:', error);
+      console.error('TimeSlotSection: Error in fetchTimeSlots:', error);
       toast({
         title: "Error",
         description: `Failed to fetch time slots: ${error.message}`,
@@ -68,17 +82,17 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
 
   const addTimeSlot = async (dayOfWeek: number) => {
     try {
-      console.log('Adding time slot for trainer ID:', trainerId, 'Day:', dayOfWeek);
+      console.log('TimeSlotSection: Adding time slot for trainer profile ID:', trainerId, 'Day:', dayOfWeek);
       
       const newSlot = {
-        trainer_id: trainerId,
+        trainer_id: trainerId, // This should be the trainer_profiles.id
         day_of_week: dayOfWeek,
         start_time: '09:00',
         end_time: '10:00',
         is_available: true
       };
 
-      console.log('Inserting new slot:', newSlot);
+      console.log('TimeSlotSection: Inserting new slot:', newSlot);
 
       const { data, error } = await supabase
         .from('trainer_time_slots')
@@ -87,18 +101,18 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({ trainerId }) => {
         .single();
 
       if (error) {
-        console.error('Error adding time slot:', error);
+        console.error('TimeSlotSection: Error adding time slot:', error);
         throw error;
       }
       
-      console.log('Successfully added time slot:', data);
+      console.log('TimeSlotSection: Successfully added time slot:', data);
       fetchTimeSlots();
       toast({
         title: "Success",
         description: "Time slot added successfully"
       });
     } catch (error: any) {
-      console.error('Error adding time slot:', error);
+      console.error('TimeSlotSection: Error adding time slot:', error);
       toast({
         title: "Error",
         description: `Failed to add time slot: ${error.message}`,
