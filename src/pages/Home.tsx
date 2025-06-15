@@ -40,11 +40,26 @@ const Home = () => {
     <Layout>
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop')] bg-cover bg-center opacity-20"></div>
+        {/* Background with improved mobile fitting */}
+        <div className="absolute inset-0">
+          {/* Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 z-10"></div>
+          
+          {/* Background Image with better mobile positioning */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center sm:bg-center bg-no-repeat"
+            style={{
+              backgroundImage: "url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop')",
+              backgroundPosition: "center center",
+              backgroundSize: "cover"
+            }}
+          ></div>
+          
+          {/* Enhanced overlay for better text readability on mobile */}
+          <div className="absolute inset-0 bg-slate-900/70 sm:bg-slate-900/50 z-20"></div>
         </div>
         
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="relative z-30 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-4xl mx-auto animate-fade-in">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight">
               Find Your Perfect
@@ -72,39 +87,39 @@ const Home = () => {
           </div>
         </div>
         
-        {/* Enhanced 3D Floating Elements */}
-        <div className="absolute top-10 sm:top-20 left-4 sm:left-10 w-12 h-12 sm:w-20 sm:h-20 bg-teal-400/30 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute top-1/4 right-4 sm:right-10 w-16 h-16 sm:w-24 sm:h-24 bg-lime-400/20 rounded-full blur-xl animate-pulse delay-500"></div>
-        <div className="absolute bottom-20 sm:bottom-1/4 left-1/4 w-20 h-20 sm:w-32 sm:h-32 bg-purple-400/20 rounded-full blur-xl animate-pulse delay-1000"></div>
+        {/* Enhanced 3D Floating Elements - Optimized for mobile */}
+        <div className="absolute top-10 sm:top-20 left-4 sm:left-10 w-8 h-8 sm:w-20 sm:h-20 bg-teal-400/20 sm:bg-teal-400/30 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-1/4 right-4 sm:right-10 w-10 h-10 sm:w-24 sm:h-24 bg-lime-400/15 sm:bg-lime-400/20 rounded-full blur-xl animate-pulse delay-500"></div>
+        <div className="absolute bottom-20 sm:bottom-1/4 left-1/4 w-12 h-12 sm:w-32 sm:h-32 bg-purple-400/15 sm:bg-purple-400/20 rounded-full blur-xl animate-pulse delay-1000"></div>
         
-        {/* 3D Geometric Shapes */}
-        <div className="absolute top-1/3 left-1/4 hidden sm:block">
-          <div className="w-16 h-16 bg-gradient-to-br from-teal-400/30 to-teal-600/30 transform rotate-45 animate-spin" style={{ animationDuration: '20s' }}></div>
+        {/* 3D Geometric Shapes - Hidden on mobile for cleaner look */}
+        <div className="absolute top-1/3 left-1/4 hidden md:block">
+          <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-teal-400/30 to-teal-600/30 transform rotate-45 animate-spin" style={{ animationDuration: '20s' }}></div>
         </div>
         
-        <div className="absolute bottom-1/3 right-1/4 hidden sm:block">
-          <div className="w-20 h-20 bg-gradient-to-br from-lime-400/30 to-lime-600/30 rounded-full transform animate-bounce" style={{ animationDelay: '1s', animationDuration: '3s' }}></div>
+        <div className="absolute bottom-1/3 right-1/4 hidden md:block">
+          <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-lime-400/30 to-lime-600/30 rounded-full transform animate-bounce" style={{ animationDelay: '1s', animationDuration: '3s' }}></div>
         </div>
         
-        {/* 3D Card-like Elements */}
-        <div className="absolute top-1/2 left-8 hidden lg:block transform -rotate-12 hover:rotate-0 transition-transform duration-500">
-          <div className="w-24 h-32 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg shadow-2xl transform perspective-1000 rotateY-15"></div>
+        {/* 3D Card-like Elements - Hidden on mobile and tablet */}
+        <div className="absolute top-1/2 left-8 hidden xl:block transform -rotate-12 hover:rotate-0 transition-transform duration-500">
+          <div className="w-24 h-32 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg shadow-2xl"></div>
         </div>
         
-        <div className="absolute top-1/3 right-8 hidden lg:block transform rotate-12 hover:rotate-0 transition-transform duration-500">
-          <div className="w-28 h-36 bg-gradient-to-br from-teal-500/20 to-teal-700/20 backdrop-blur-sm border border-teal-400/30 rounded-lg shadow-2xl transform perspective-1000 rotateY-15"></div>
+        <div className="absolute top-1/3 right-8 hidden xl:block transform rotate-12 hover:rotate-0 transition-transform duration-500">
+          <div className="w-28 h-36 bg-gradient-to-br from-teal-500/20 to-teal-700/20 backdrop-blur-sm border border-teal-400/30 rounded-lg shadow-2xl"></div>
         </div>
         
-        {/* Mobile-friendly floating icons */}
-        <div className="absolute top-16 right-4 sm:hidden">
-          <div className="w-8 h-8 bg-teal-400/40 rounded-full flex items-center justify-center animate-bounce">
-            <Heart className="w-4 h-4 text-white" />
+        {/* Mobile-friendly floating icons - Better positioned */}
+        <div className="absolute top-20 right-6 sm:hidden z-40">
+          <div className="w-10 h-10 bg-teal-400/30 rounded-full flex items-center justify-center animate-bounce backdrop-blur-sm">
+            <Heart className="w-5 h-5 text-white" />
           </div>
         </div>
         
-        <div className="absolute bottom-32 left-4 sm:hidden">
-          <div className="w-8 h-8 bg-lime-400/40 rounded-full flex items-center justify-center animate-pulse">
-            <Award className="w-4 h-4 text-white" />
+        <div className="absolute bottom-40 left-6 sm:hidden z-40">
+          <div className="w-10 h-10 bg-lime-400/30 rounded-full flex items-center justify-center animate-pulse backdrop-blur-sm">
+            <Award className="w-5 h-5 text-white" />
           </div>
         </div>
       </section>
